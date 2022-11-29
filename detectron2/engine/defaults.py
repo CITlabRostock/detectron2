@@ -23,7 +23,7 @@ from torch.nn.parallel import DistributedDataParallel
 
 import detectron2.data.transforms as T
 from detectron2.checkpoint import DetectionCheckpointer
-from detectron2.config import CfgNode, LazyConfig
+from detectron2.config import CfgNode, LazyConfig, instantiate
 from detectron2.data import (
     MetadataCatalog,
     build_detection_test_loader,
@@ -91,7 +91,7 @@ def default_argument_parser(epilog=None):
     """
     parser = argparse.ArgumentParser(
         epilog=epilog
-        or f"""
+               or f"""
 Examples:
 
 Run on single machine:
@@ -111,7 +111,7 @@ Run on multiple machines:
         "--resume",
         action="store_true",
         help="Whether to attempt to resume from the checkpoint directory. "
-        "See documentation of `DefaultTrainer.resume_or_load()` for what it means.",
+             "See documentation of `DefaultTrainer.resume_or_load()` for what it means.",
     )
     parser.add_argument("--eval-only", action="store_true", help="perform evaluation only")
     parser.add_argument("--num-gpus", type=int, default=1, help="number of gpus *per machine*")
@@ -123,12 +123,12 @@ Run on multiple machines:
     # PyTorch still may leave orphan processes in multi-gpu training.
     # Therefore we use a deterministic way to obtain port,
     # so that users are aware of orphan processes by seeing the port occupied.
-    port = 2**15 + 2**14 + hash(os.getuid() if sys.platform != "win32" else 1) % 2**14
+    port = 2 ** 15 + 2 ** 14 + hash(os.getuid() if sys.platform != "win32" else 1) % 2 ** 14
     parser.add_argument(
         "--dist-url",
         default="tcp://127.0.0.1:{}".format(port),
         help="initialization URL for pytorch distributed backend. See "
-        "https://pytorch.org/docs/stable/distributed.html for details.",
+             "https://pytorch.org/docs/stable/distributed.html for details.",
     )
     parser.add_argument(
         "opts",
@@ -253,23 +253,18 @@ class DefaultPredictor:
     """
     Create a simple end-to-end predictor with the given config that runs on
     single device for a single input image.
-
     Compared to using the model directly, this class does the following additions:
-
-    1. Load checkpoint from `cfg.MODEL.WEIGHTS`.
-    2. Always take BGR image as the input and apply conversion defined by `cfg.INPUT.FORMAT`.
-    3. Apply resizing defined by `cfg.INPUT.{MIN,MAX}_SIZE_TEST`.
+    1. Load checkpoint from the weights specified in config (cfg.MODEL.WEIGHTS).
+    2. Always take BGR image as the input and apply format conversion internally.
+    3. Apply resizing defined by the config (`cfg.INPUT.{MIN,MAX}_SIZE_TEST`).
     4. Take one input image and produce a single output, instead of a batch.
-
     This is meant for simple demo purposes, so it does the above steps automatically.
     This is not meant for benchmarks or running complicated inference logic.
     If you'd like to do anything more complicated, please refer to its source code as
     examples to build and use the model manually.
-
     Attributes:
         metadata (Metadata): the metadata of the underlying dataset, obtained from
-            cfg.DATASETS.TEST.
-
+            test dataset name in the config.
     Examples:
     ::
         pred = DefaultPredictor(cfg)
@@ -278,27 +273,47 @@ class DefaultPredictor:
     """
 
     def __init__(self, cfg):
-        self.cfg = cfg.clone()  # cfg can be modified by model
-        self.model = build_model(self.cfg)
+        """
+        Args:
+            cfg: a yacs CfgNode or a omegaconf dict object.
+        """
+        if isinstance(cfg, CfgNode):
+            self.cfg = cfg.clone()  # cfg can be modified by model
+            self.model = build_model(self.cfg)
+            if len(cfg.DATASETS.TEST):
+                test_dataset = cfg.DATASETS.TEST[0]
+
+            checkpointer = DetectionCheckpointer(self.model)
+            checkpointer.load(cfg.MODEL.WEIGHTS)
+
+            self.aug = T.ResizeShortestEdge(
+                [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+            )
+
+            self.input_format = cfg.INPUT.FORMAT
+        else:  # new LazyConfig
+            self.cfg = cfg
+            self.model = instantiate(cfg.model)
+            test_dataset = OmegaConf.select(cfg, "dataloader.test.dataset.names", default=None)
+            if isinstance(test_dataset, (list, tuple)):
+                test_dataset = test_dataset[0]
+
+            checkpointer = DetectionCheckpointer(self.model)
+            checkpointer.load(OmegaConf.select(cfg, "train.init_checkpoint", default=""))
+
+            mapper = instantiate(cfg.dataloader.test.mapper)
+            self.aug = mapper.augmentations
+            self.input_format = mapper.image_format
+
         self.model.eval()
-        if len(cfg.DATASETS.TEST):
-            self.metadata = MetadataCatalog.get(cfg.DATASETS.TEST[0])
-
-        checkpointer = DetectionCheckpointer(self.model)
-        checkpointer.load(cfg.MODEL.WEIGHTS)
-
-        self.aug = T.ResizeShortestEdge(
-            [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
-        )
-
-        self.input_format = cfg.INPUT.FORMAT
+        if test_dataset:
+            self.metadata = MetadataCatalog.get(test_dataset)
         assert self.input_format in ["RGB", "BGR"], self.input_format
 
     def __call__(self, original_image):
         """
         Args:
             original_image (np.ndarray): an image of shape (H, W, C) (in BGR order).
-
         Returns:
             predictions (dict):
                 the output of the model for one image only.
@@ -310,12 +325,81 @@ class DefaultPredictor:
                 # whether the model expects BGR inputs or RGB
                 original_image = original_image[:, :, ::-1]
             height, width = original_image.shape[:2]
-            image = self.aug.get_transform(original_image).apply_image(original_image)
+            image = self.aug(T.AugInput(original_image)).apply_image(original_image)
             image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
 
             inputs = {"image": image, "height": height, "width": width}
             predictions = self.model([inputs])[0]
             return predictions
+
+
+# class DefaultPredictor:
+#     """
+#     Create a simple end-to-end predictor with the given config that runs on
+#     single device for a single input image.
+#
+#     Compared to using the model directly, this class does the following additions:
+#
+#     1. Load checkpoint from `cfg.MODEL.WEIGHTS`.
+#     2. Always take BGR image as the input and apply conversion defined by `cfg.INPUT.FORMAT`.
+#     3. Apply resizing defined by `cfg.INPUT.{MIN,MAX}_SIZE_TEST`.
+#     4. Take one input image and produce a single output, instead of a batch.
+#
+#     This is meant for simple demo purposes, so it does the above steps automatically.
+#     This is not meant for benchmarks or running complicated inference logic.
+#     If you'd like to do anything more complicated, please refer to its source code as
+#     examples to build and use the model manually.
+#
+#     Attributes:
+#         metadata (Metadata): the metadata of the underlying dataset, obtained from
+#             cfg.DATASETS.TEST.
+#
+#     Examples:
+#     ::
+#         pred = DefaultPredictor(cfg)
+#         inputs = cv2.imread("input.jpg")
+#         outputs = pred(inputs)
+#     """
+#
+#     def __init__(self, cfg):
+#         self.cfg = cfg.clone()  # cfg can be modified by model
+#         self.model = build_model(self.cfg)
+#         self.model.eval()
+#         if len(cfg.DATASETS.TEST):
+#             self.metadata = MetadataCatalog.get(cfg.DATASETS.TEST[0])
+#
+#         checkpointer = DetectionCheckpointer(self.model)
+#         checkpointer.load(cfg.MODEL.WEIGHTS)
+#
+#         self.aug = T.ResizeShortestEdge(
+#             [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+#         )
+#
+#         self.input_format = cfg.INPUT.FORMAT
+#         assert self.input_format in ["RGB", "BGR"], self.input_format
+#
+#     def __call__(self, original_image):
+#         """
+#         Args:
+#             original_image (np.ndarray): an image of shape (H, W, C) (in BGR order).
+#
+#         Returns:
+#             predictions (dict):
+#                 the output of the model for one image only.
+#                 See :doc:`/tutorials/models` for details about the format.
+#         """
+#         with torch.no_grad():  # https://github.com/sphinx-doc/sphinx/issues/4258
+#             # Apply pre-processing to image.
+#             if self.input_format == "RGB":
+#                 # whether the model expects BGR inputs or RGB
+#                 original_image = original_image[:, :, ::-1]
+#             height, width = original_image.shape[:2]
+#             image = self.aug.get_transform(original_image).apply_image(original_image)
+#             image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
+#
+#             inputs = {"image": image, "height": height, "width": width}
+#             predictions = self.model([inputs])[0]
+#             return predictions
 
 
 class DefaultTrainer(TrainerBase):
@@ -679,7 +763,7 @@ Alternatively, you can call evaluation functions yourself (see Colab balloon tut
         cfg.defrost()
 
         assert (
-            cfg.SOLVER.IMS_PER_BATCH % old_world_size == 0
+                cfg.SOLVER.IMS_PER_BATCH % old_world_size == 0
         ), "Invalid REFERENCE_WORLD_SIZE in config!"
         scale = num_workers / old_world_size
         bs = cfg.SOLVER.IMS_PER_BATCH = int(round(cfg.SOLVER.IMS_PER_BATCH * scale))
