@@ -1,0 +1,11 @@
+Detectron2 Steps
+1.) Update virtualenv: pip install virtualenv --upgrade
+2.) Create new virtualenv: python3 -m venv /path/to/new_venv
+3.) Follow installation instructions on https://detectron2.readthedocs.io/en/latest/tutorials/install.html:
+	- Installed PyTorch together with torchvision (here CPU) via the following command (https://pytorch.org/):
+		pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
+	- Built Detectron2 from source as described:
+		python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+	- While running the last step errors of the form "error: invalid command 'bdist_wheel'" occured -> fixed with 
+		python setup.py bdist_wheel
+
