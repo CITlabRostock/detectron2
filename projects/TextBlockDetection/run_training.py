@@ -59,7 +59,7 @@ def custom_config_py(num_classes, output_dir, model="new_baselines/mask_rcnn_reg
     return cfg
 
 
-def custom_config_yaml(num_classes, output_dir, model="COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
+def custom_config_yaml(num_classes, output_dir, model="COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml", learning_rate=0.1):
     cfg = get_cfg()
 
     # get configuration from model_zoo
@@ -74,11 +74,13 @@ def custom_config_yaml(num_classes, output_dir, model="COCO-InstanceSegmentation
     # cfg.MODEL.RESNETS.RES2_OUT_CHANNELS = 64
 
     # Solver
-    cfg.SOLVER.BASE_LR = 0.0002
+    # cfg.SOLVER.BASE_LR = 0.0002
+    cfg.SOLVER.BASE_LR = learning_rate
     cfg.SOLVER.MAX_ITER = 100000
     cfg.SOLVER.STEPS = (20, 10000, 20000)
     cfg.SOLVER.gamma = 0.5
-    cfg.SOLVER.IMS_PER_BATCH = 4
+    # cfg.SOLVER.IMS_PER_BATCH = 4
+    cfg.SOLVER.IMS_PER_BATCH = 16
 
     # Test
     cfg.TEST.DETECTIONS_PER_IMAGE = 30
@@ -142,69 +144,71 @@ def main(args, num_classes, output_dir, config_file):
         MetadataCatalog.get(d).set(thing_classes=["textblock", "heading"])
     metadata = MetadataCatalog.get("train")
 
-    # cfg = custom_config_yaml(num_classes=num_classes,
-    #                          output_dir=output_dir,
-    #                          model=config_file)
-
-    # trainer = DefaultTrainer(cfg)
-    # trainer.resume_or_load(resume=False)
-    # return trainer.train()
-
+    lr = 0.01
     if args.num_gpus:
         bs = (args.num_gpus * 2)
         lr = 0.02 * bs / 16
-    cfg = custom_config_py(num_classes=num_classes,
-                           output_dir=output_dir,
-                           model=config_file,
-                           learning_rate=lr)
-    # cfg.dataloader.evaluator = COCOEvaluator('val', output_dir=output_dir)
-    # default_setup(cfg, args)
 
-    model = instantiate(cfg.model)
-    logger = logging.getLogger("detectron2")
-    logger.info("Model:\n{}".format(model))
-    model.to(cfg.train.device)
+    if config_file.endswith(".py"):
+        cfg = custom_config_py(num_classes=num_classes,
+                               output_dir=output_dir,
+                               model=config_file,
+                               learning_rate=lr)
 
-    cfg.optimizer.params.model = model
-    optim = instantiate(cfg.optimizer)
+        model = instantiate(cfg.model)
+        logger = logging.getLogger("detectron2")
+        logger.info("Model:\n{}".format(model))
+        model.to(cfg.train.device)
 
-    train_loader = instantiate(cfg.dataloader.train)
+        cfg.optimizer.params.model = model
+        optim = instantiate(cfg.optimizer)
 
-    model = create_ddp_model(model, **cfg.train.ddp)
-    trainer = (AMPTrainer if cfg.train.amp.enabled else SimpleTrainer)(model, train_loader, optim)
-    checkpointer = DetectionCheckpointer(
-        model,
-        cfg.train.output_dir,
-        trainer=trainer,
-    )
-    trainer.register_hooks(
-        [
-            hooks.IterationTimer(),
-            hooks.LRScheduler(scheduler=instantiate(cfg.lr_multiplier)),
-            hooks.PeriodicCheckpointer(checkpointer, **cfg.train.checkpointer)
-            if comm.is_main_process()
-            else None,
-            # hooks.EvalHook(cfg.train.eval_period, lambda: do_test(cfg, model)),
-            hooks.PeriodicWriter(
-                default_writers(cfg.train.output_dir, cfg.train.max_iter),
-                period=cfg.train.log_period,
-            )
-            if comm.is_main_process()
-            else None,
-        ]
-    )
+        train_loader = instantiate(cfg.dataloader.train)
 
-    resume = True
-    checkpointer.resume_or_load(cfg.train.init_checkpoint, resume=resume)
-    if resume and checkpointer.has_checkpoint():
-        # The checkpoint stores the training iteration that just finished, thus we start
-        # at the next iteration
-        start_iter = trainer.iter + 1
+        # cfg.dataloader.evaluator = COCOEvaluator('val', output_dir=output_dir)
+        # default_setup(cfg, args)
+
+        model = create_ddp_model(model, **cfg.train.ddp)
+        trainer = (AMPTrainer if cfg.train.amp.enabled else SimpleTrainer)(model, train_loader, optim)
+        checkpointer = DetectionCheckpointer(
+            model,
+            cfg.train.output_dir,
+            trainer=trainer,
+        )
+        trainer.register_hooks(
+            [
+                hooks.IterationTimer(),
+                hooks.LRScheduler(scheduler=instantiate(cfg.lr_multiplier)),
+                hooks.PeriodicCheckpointer(checkpointer, **cfg.train.checkpointer)
+                if comm.is_main_process()
+                else None,
+                # hooks.EvalHook(cfg.train.eval_period, lambda: do_test(cfg, model)),
+                hooks.PeriodicWriter(
+                    default_writers(cfg.train.output_dir, cfg.train.max_iter),
+                    period=cfg.train.log_period,
+                )
+                if comm.is_main_process()
+                else None,
+            ]
+        )
+
+        resume = True
+        checkpointer.resume_or_load(cfg.train.init_checkpoint, resume=resume)
+        if resume and checkpointer.has_checkpoint():
+            # The checkpoint stores the training iteration that just finished, thus we start
+            # at the next iteration
+            start_iter = trainer.iter + 1
+        else:
+            start_iter = 0
+        trainer.train(start_iter, cfg.train.max_iter)
     else:
-        start_iter = 0
-    trainer.train(start_iter, cfg.train.max_iter)
-
-
+        cfg = custom_config_yaml(num_classes=num_classes,
+                                 output_dir=output_dir,
+                                 model=config_file,
+                                 learning_rate=lr)
+        trainer = DefaultTrainer(cfg)
+        trainer.resume_or_load(resume=False)
+        return trainer.train()
 
 
 if __name__ == '__main__':
