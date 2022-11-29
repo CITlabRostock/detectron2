@@ -1,3 +1,20 @@
+"""
+Run detectron2 training for text block | heading | separator detection.
+
+Available yaml-configs:
+- mask_rcnn_R_50_C4_1x.yaml
+- mask_rcnn_R_50_C4_3x.yaml
+- mask_rcnn_R_50_DC5_1x.yaml
+- mask_rcnn_R_50_DC5_3x.yaml
+- mask_rcnn_R_50_FPN_1x.yaml
+- mask_rcnn_R_50_FPN_1x_giou.yaml
+- mask_rcnn_R_50_FPN_3x.yaml
+- mask_rcnn_R_101_C4_3x.yaml
+- mask_rcnn_R_101_DC5_3x.yaml
+- mask_rcnn_R_101_FPN_3x.yaml
+- mask_rcnn_X_101_32x8d_FPN_3x.yaml
+"""
+
 import logging
 
 import json
@@ -15,6 +32,8 @@ from detectron2.config import get_cfg, LazyConfig, instantiate
 import argparse
 
 from detectron2.utils import comm
+
+CLASSES = ["textblock", "heading"]
 
 
 def load_data(data_dir, t="train"):
@@ -141,7 +160,7 @@ def main(args, num_classes, output_dir, config_file):
     for d in ["train", "val"]:
         DatasetCatalog.register(d, lambda d=d: load_data(args.data_dir, d))
         # MetadataCatalog.get(d).set(thing_classes=["textblock", "heading", "separator"])
-        MetadataCatalog.get(d).set(thing_classes=["textblock", "heading"])
+        MetadataCatalog.get(d).set(thing_classes=CLASSES)
     metadata = MetadataCatalog.get("train")
 
     lr = 0.01
@@ -219,12 +238,6 @@ if __name__ == '__main__':
     #     MetadataCatalog.get(d).set(thing_classes=["textblock", "heading", "separator"])
     # metadata = MetadataCatalog.get("train")
 
-    output_dir = ""
-    if args.output_dir is not None:
-        output_dir = args.output_dir
-    else:
-        output_dir = os.path.join(args.data_dir, "output")
-
     config_file = ""
     if args.config_file is not None:
         config_file = args.config_file
@@ -233,19 +246,20 @@ if __name__ == '__main__':
         config_file = "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml"
         config_file = "new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ.py"
 
-    # cfg = custom_config(num_classes=3,
-    #                     output_dir=output_dir,
-    #                     model=config_file)
-
-    # trainer = DefaultTrainer(cfg)
-    # trainer.resume_or_load(resume=False)
-    # trainer.train()
+    output_dir = ""
+    if args.output_dir is not None:
+        output_dir = args.output_dir
+    else:
+        output_dir = os.path.join(args.data_dir, "output_" + config_file.split("/")[-1].split(".")[0])
+    if not os.path.exists(output_dir):
+        print(f"Output directory {output_dir} does not exist, create it..")
+        os.makedirs(output_dir)
 
     num_gpus = 0
     if args.num_gpus is not None:
         num_gpus = args.num_gpus
 
-    num_classes = 2
+    num_classes = len(CLASSES)
     if args.num_classes is not None:
         num_classes = args.num_classes
 
