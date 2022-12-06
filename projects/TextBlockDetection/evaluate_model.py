@@ -58,12 +58,14 @@ def custom_config_py(num_classes, output_dir, model_weights,
     return cfg
 
 
-def custom_config_yaml(num_classes, output_dir, model="COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
-    cfg = get_cfg()
-
-    # get configuration from model_zoo
-    cfg.merge_from_file(model_zoo.get_config_file(model))
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(model)
+def custom_config_yaml(num_classes, output_dir, model_weights_path, config_file="COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
+    cfg = get_config(config_file)
+    cfg.MODEL.WEIGHTS = model_weights_path
+    # cfg = get_cfg()
+    #
+    # # get configuration from model_zoo
+    # cfg.merge_from_file(model_zoo.get_config_file(model))
+    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(model)
 
     # Model
     cfg.MODEL.MASK_ON = True
@@ -132,58 +134,35 @@ def do_test(cfg, model):
 
 
 def main(args, num_classes, output_dir, config_file, model_weights):
-    # cfg = LazyConfig.load(config_file)
-    cfg = custom_config_py(num_classes, output_dir, model_weights, config_file)
-    # default_setup(cfg, args)
-
-    # Eval only
     DatasetCatalog.register('val', lambda d='val': load_data(args.data_dir, d))
-    MetadataCatalog.get('val').set(thing_classes=['textblock', 'heading', 'separator'])
+    # MetadataCatalog.get('val').set(thing_classes=['textblock', 'heading', 'separator'])
+    MetadataCatalog.get('val').set(thing_classes=['textblock', 'heading'])
     metadata = MetadataCatalog.get('val')
-    model = instantiate(cfg.model)
-    model.to(cfg.train.device)
-    model = create_ddp_model(model)
-    DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
-    cfg.dataloader.evaluator = COCOEvaluator('val', tasks=('bbox', 'segm',), output_dir=output_dir)
-    print(do_test(cfg, model))
 
-    # for d in ["train", "val"]:
-    #     DatasetCatalog.register(d, lambda d=d: load_data(args.data_dir, d))
-    #     MetadataCatalog.get(d).set(thing_classes=["textblock", "heading", "separator"])
-    #     # MetadataCatalog.get(d).set(thing_classes=["textblock", "heading"])
-    # metadata = MetadataCatalog.get("train")
-    #
-    # cfg = custom_config_py(num_classes=num_classes,
-    #                        output_dir=output_dir,
-    #                        model=config_file,
-    #                        model_weights=model_weights)
-    #
-    # # # Predictor
-    # # trainer = DefaultTrainer(cfg)
-    # # trainer.model = DefaultPredictor(cfg).model
-    #
-    # cfg.dataloader.evaluator = COCOEvaluator('val', tasks=('bbox',), output_dir=output_dir)
-    #
-    # # trainer.model.to(cfg.train.device)
-    #
-    #
-    # # default_setup(cfg, args)
-    #
-    # # model = instantiate(cfg.model)
-    # # logger = logging.getLogger("detectron2")
-    # # logger.info("Model:\n{}".format(model))
-    # # model.to(cfg.train.device)
-    #
-    # # cfg.optimizer.params.model = model
-    # # optim = instantiate(cfg.optimizer)
-    #
-    # # train_loader = instantiate(cfg.dataloader.train)
-    #
-    # # model = create_ddp_model(model, **cfg.train.ddp)
-    #
-    # print("TYPE: ", type(cfg))
-    #
-    # do_test(cfg, DefaultPredictor(cfg).model)
+    if config_file.endswith(".py"):
+        cfg = custom_config_py(num_classes, output_dir, model_weights, config_file)
+        model = instantiate(cfg.model)
+        model.to(cfg.train.device)
+        model = create_ddp_model(model)
+        DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
+        cfg.dataloader.evaluator = COCOEvaluator('val', tasks=('bbox', 'segm',), output_dir=output_dir)
+        print(do_test(cfg, model))
+    elif config_file.endswith(".yaml"):
+        cfg = get_config(config_file)
+        cfg.MODEL.WEIGHTS = model_weights
+        cfg.MODEL.DEVICE = 'cpu'
+        # cfg.merge_from_file(model_zoo.get_config_file(config_file))
+        cfg.DATASETS.TRAIN = ("train",)
+        cfg.DATASETS.TEST = ()
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
+        cfg.MODEL.MASK_ON = True
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = num_classes
+        predictor = DefaultPredictor(cfg)
+        from detectron2.evaluation import inference_on_dataset
+        from detectron2.data import build_detection_test_loader
+        evaluator = COCOEvaluator("val", tasks=('bbox', 'segm',), output_dir=output_dir)
+        val_loader = build_detection_test_loader(cfg, "val")
+        print(inference_on_dataset(predictor.model, val_loader, evaluator))
 
 
 if __name__ == '__main__':
@@ -207,8 +186,10 @@ if __name__ == '__main__':
         config_file = "./new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ.py"
         # config_file = "/new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ.py"
 
-    model_weights = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/new_split/par_hd/models/output_x_400ep_lsj/model_0029999.pth"
-    num_classes = 3
+    # model_weights = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/new_split/par_hd/models/output_x_400ep_lsj/model_0029999.pth"
+    model_weights = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/mask_rcnn_R_50_FPN_1x/model_final.pth"
+
+    num_classes = 2
 
     num_gpus = 0
     if args.num_gpus is not None:

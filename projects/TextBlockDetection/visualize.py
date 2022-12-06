@@ -64,7 +64,10 @@ def visualization(metadata, cfg, image_list_path, model_weights_path):
 
         save_folder = "/home/max/tb_det_test/tb_hd_sep_101"
         save_file_name = os.path.basename(image_path)
-        plt.imsave(os.path.join(save_folder, save_file_name), img)
+        # plt.imsave(os.path.join(save_folder, save_file_name), img)
+        plt.imshow(img)
+        plt.show()
+
 
 
 if __name__ == "__main__":
