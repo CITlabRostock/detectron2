@@ -104,12 +104,19 @@ def get_parser():
     parser.add_argument("--config-file",
                         metavar="FILE",
                         help="path to config file")
+    parser.add_argument("--model_weights",
+                        metavar="FILE",
+                        help="path to .pth model weights file")
     parser.add_argument("--data_dir",
                         metavar="DIR",
                         help="path to the folder where the data is stored.")
     parser.add_argument("--output_dir",
                         metavar="DIR",
                         help="path to the output directory")
+    parser.add_argument("--num_classes",
+                        type=int,
+                        help="number of classes",
+                        default=2)  # textblock, heading
     parser.add_argument("--num_gpus",
                         type=int,
                         help="number of GPUs to run training on.")
@@ -186,10 +193,9 @@ if __name__ == '__main__':
         config_file = "./new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ.py"
         # config_file = "/new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ.py"
 
-    # model_weights = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/new_split/par_hd/models/output_x_400ep_lsj/model_0029999.pth"
-    model_weights = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/mask_rcnn_R_50_FPN_1x/model_final.pth"
-
-    num_classes = 2
+    # model_weights = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/mask_rcnn_R_50_FPN_1x/model_final.pth"
+    model_weights = args.model_weights
+    num_classes = args.num_classes
 
     num_gpus = 0
     if args.num_gpus is not None:

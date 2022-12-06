@@ -86,10 +86,11 @@ def custom_config_py(num_classes, output_dir, model="new_baselines/mask_rcnn_reg
 
 def custom_config_yaml(num_classes, output_dir, model="COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml", learning_rate=0.1):
     cfg = get_cfg()
+    cfg = get_config(model)
 
     # get configuration from model_zoo
-    cfg.merge_from_file(model_zoo.get_config_file(model))
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(model)
+    # cfg.merge_from_file(model_zoo.get_config_file(model))
+    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(model)
 
     # Model
     cfg.MODEL.MASK_ON = True
@@ -104,8 +105,8 @@ def custom_config_yaml(num_classes, output_dir, model="COCO-InstanceSegmentation
     cfg.SOLVER.MAX_ITER = 100000
     cfg.SOLVER.STEPS = (20, 10000, 20000)
     cfg.SOLVER.gamma = 0.5
-    # cfg.SOLVER.IMS_PER_BATCH = 4
-    cfg.SOLVER.IMS_PER_BATCH = 16
+    cfg.SOLVER.IMS_PER_BATCH = 4
+    # cfg.SOLVER.IMS_PER_BATCH = 16
 
     # Test
     cfg.TEST.DETECTIONS_PER_IMAGE = 30
