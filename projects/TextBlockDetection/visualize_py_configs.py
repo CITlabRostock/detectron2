@@ -35,7 +35,6 @@ def visualization(metadata, cfg, image_list_path, model_weights_path, num_classe
         img = cv2.cvtColor(out.get_image()[:, :, ::-1], cv2.COLOR_RGBA2RGB)
 
         save_folder = "/home/max/tb_det_test/onb173_tb_hd_101_x_lsj_new"
-        print(f"Saving to {save_folder} ...")
         save_file_name = os.path.basename(image_path)
         # plt.imshow(img)
         # plt.show()
