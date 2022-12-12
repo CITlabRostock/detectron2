@@ -44,7 +44,11 @@ def custom_config_py(num_classes, output_dir, model_weights,
     # RUN ON CPU
     cfg.train.device = 'cpu'
     # cfg.test.device = 'cpu'
-    cfg.model.backbone.bottom_up.norm = "BN"
+    if "mask_rcnn_R_50_FPN_400ep_LSJ" in model:
+        cfg.model.backbone.bottom_up.stem.norm = "BN"
+        cfg.model.backbone.bottom_up.stages.norm = "BN"
+    else:
+        cfg.model.backbone.bottom_up.norm = "BN"
     cfg.model.backbone.norm = "BN"
 
     cfg.model.roi_heads.num_classes = num_classes

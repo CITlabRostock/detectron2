@@ -12,11 +12,11 @@ Available yaml-configs (prefix with "COCO-InstanceSegmentation/"):
 + mask_rcnn_R_101_C4_3x.yaml
 + mask_rcnn_R_101_DC5_3x.yaml
 + mask_rcnn_R_101_FPN_3x.yaml
-R mask_rcnn_X_101_32x8d_FPN_3x.yaml
++ mask_rcnn_X_101_32x8d_FPN_3x.yaml
 
 Available py-configs (prefix with "new_baselines/"):
-- mask_rcnn_R_50_FPN_[50|100|200|400]ep_LSJ.py
-- mask_rcnn_R_101_FPN_[100|200|400]ep_LSJ.py
++ mask_rcnn_R_50_FPN_[50|100|200|400]ep_LSJ.py
+R mask_rcnn_R_101_FPN_[100|200|400]ep_LSJ.py
 - mask_rcnn_regnetx_4gf_dds_FPN_[100|200|400]ep_LSJ.py
 - mask_rcnn_regnety_4gf_dds_FPN_[100|200|400]ep_LSJ.py
 """

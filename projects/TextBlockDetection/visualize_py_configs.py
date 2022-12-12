@@ -1,3 +1,4 @@
+from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultPredictor
 from detectron2.model_zoo import get_config
 from detectron2.utils.visualizer import Visualizer, ColorMode
@@ -14,7 +15,11 @@ def visualization(metadata, cfg, image_list_path, model_weights_path, num_classe
     # no equivalent for 'cfg.MODEL.MASK_ON = True', default?
 
     # necessary to run on CPU
-    cfg.model.backbone.bottom_up.norm = "BN"
+    if "mask_rcnn_R_50_FPN_400ep_LSJ" in model_weights_path:
+        cfg.model.backbone.bottom_up.stem.norm = "BN"
+        cfg.model.backbone.bottom_up.stages.norm = "BN"
+    else:
+        cfg.model.backbone.bottom_up.norm = "BN"
     cfg.model.backbone.norm = "BN"
 
     predictor = DefaultPredictor(cfg)
@@ -39,6 +44,7 @@ def visualization(metadata, cfg, image_list_path, model_weights_path, num_classe
 if __name__ == "__main__":
     model = "new_baselines/mask_rcnn_regnety_4gf_dds_FPN_400ep_LSJ.py"
     model = "new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ.py"
+    # model = "new_baselines/mask_rcnn_R_50_FPN_400ep_LSJ.py"
     num_classes = 2
 
     cfg = get_config(model)
@@ -46,7 +52,8 @@ if __name__ == "__main__":
     # cfg.test.device = 'cpu'
 
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_x_400ep_lsj/model_final.pth"
-    model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_x_400ep_lsj/model_0034999.pth"
+    # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_x_400ep_lsj/model_0034999.pth"
+    model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_mask_rcnn_R_50_FPN_400ep_LSJ/model_final.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/par_hd/models/output_y_400ep_lsj/model_0004999.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/par_hd/models/output_y_400ep_lsj/model_0059999.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/par_hd/models/output_x_400ep_lsj/model_0029999.pth"
@@ -67,7 +74,9 @@ if __name__ == "__main__":
     # image_list_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/lists/images_test.lst"
     image_list_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/lists/old_split/images_test.lst"
 
-    metadata = None
+    CLASSES = ["tb", "hd"]
+    # The name of the MetadataCatalog is not important, call it 'train' here
+    metadata = MetadataCatalog.get("train").set(thing_classes=CLASSES)
 
     # get_predictions(cfg, image_list_path, model_weights_path)
 

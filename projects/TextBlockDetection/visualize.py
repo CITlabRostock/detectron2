@@ -1,3 +1,4 @@
+from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.engine import DefaultPredictor
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.config import get_cfg
@@ -48,7 +49,7 @@ def visualization(metadata, cfg, image_list_path, model_weights_path):
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.3
     cfg.MODEL.MASK_ON = True
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 3
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
 
     predictor = DefaultPredictor(cfg)
 
@@ -67,8 +68,6 @@ def visualization(metadata, cfg, image_list_path, model_weights_path):
         # plt.imsave(os.path.join(save_folder, save_file_name), img)
         plt.imshow(img)
         plt.show()
-
-
 
 if __name__ == "__main__":
     cfg = get_cfg()
@@ -90,7 +89,9 @@ if __name__ == "__main__":
 
     image_list_path = "/home/max/test/onb_detectron_test/images.lst"
 
-    metadata = None
+    CLASSES = ["tb", "hd"]
+    # The name of the MetadataCatalog is not important, call it 'train' here
+    metadata = MetadataCatalog.get("train").set(thing_classes=CLASSES)
 
     # get_predictions(cfg, image_list_path, model_weights_path)
 
