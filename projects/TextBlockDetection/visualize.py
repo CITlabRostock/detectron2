@@ -73,17 +73,22 @@ if __name__ == "__main__":
     cfg = get_cfg()
     # cfg.merge_from_file(
     #     "/home/max/devel/src/git/python/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-    # cfg.merge_from_file(
-    #     "/home/max/devel/src/git/python/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml")
     cfg.merge_from_file(
-        "/home/max/devel/src/git/python/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml")
+        "/home/max/devel/src/git/python/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml")
+    # cfg.merge_from_file(
+    #     "/home/max/devel/src/git/python/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml")
+    # cfg.merge_from_file(
+    #     "/home/max/devel/src/git/python/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_giou.yaml"
+    # )
     cfg.MODEL.DEVICE = 'cpu'
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112/models/model_final_101.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112_hd_sep/models/model_0044999.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112_hd_sep/models/50/model_final_50.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112_hd_sep/models/101/model_final_101.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112_hd_sep/models/101/model_0014999.pth"
-    model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112_hd_sep/models/101_x/model_final_x.pth"
+    # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112_hd_sep/models/101_x/model_final_x.pth"
+    model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/mask_rcnn_R_50_FPN_1x_giou/model_final.pth"
+    model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/mask_rcnn_R_101_FPN_3x/model_final.pth"
     image_list_path = "/home/max/data/newseye/gt_data/text_block_detection/" \
                       "GT_article_koelnische_zeitung_1936_-_reduziert/traindata/koeln112/images_val.lst"
 

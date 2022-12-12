@@ -34,11 +34,12 @@ def visualization(metadata, cfg, image_list_path, model_weights_path, num_classe
         out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         img = cv2.cvtColor(out.get_image()[:, :, ::-1], cv2.COLOR_RGBA2RGB)
 
-        save_folder = "/home/max/tb_det_test/onb173_tb_hd_101_y_lsj"
+        save_folder = "/home/max/tb_det_test/onb173_tb_hd_101_x_lsj_new"
+        print(f"Saving to {save_folder} ...")
         save_file_name = os.path.basename(image_path)
-        plt.imshow(img)
-        plt.show()
-        # plt.imsave(os.path.join(save_folder, save_file_name + ".jpg"), img)
+        # plt.imshow(img)
+        # plt.show()
+        plt.imsave(os.path.join(save_folder, save_file_name + ".jpg"), img)
 
 
 if __name__ == "__main__":
@@ -49,11 +50,11 @@ if __name__ == "__main__":
 
     cfg = get_config(model)
     cfg.train.device = 'cpu'
-    # cfg.test.device = 'cpu'
+    # cfg.test.device = 'cpu'x
 
-    # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_x_400ep_lsj/model_final.pth"
+    model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_x_400ep_lsj/model_final.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_x_400ep_lsj/model_0034999.pth"
-    model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_mask_rcnn_R_50_FPN_400ep_LSJ/model_final.pth"
+    # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/old_split/par_hd/models/output_mask_rcnn_R_50_FPN_400ep_LSJ/model_final.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/par_hd/models/output_y_400ep_lsj/model_0004999.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/par_hd/models/output_y_400ep_lsj/model_0059999.pth"
     # model_weights_path = "/home/max/data/newseye/gt_data/text_block_detection/NewsEye_ONB_173_updated_gt/traindata/par_hd/models/output_x_400ep_lsj/model_0029999.pth"
